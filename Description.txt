@@ -1,0 +1,16 @@
+Team Members:
+
+1-Rola Sultan Ahmed     "G2"
+2-Zeyad Mohamed Mamoun  "G2"
+3-Ahmed Sayed Ahmed     "G1"
+
+Description:
+Settings of my Virtual Machine :
+Number of cores is 2
+The capacity of memory is 4G
+The kernal virsion is 5.8.1
+
+
+resources:
+
+https://dev.to/jasper/adding-a-system-call-to-the-linux-kernel-5-8-1-in-ubuntu-20-04-lts-2ga8
