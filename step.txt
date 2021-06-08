@@ -1,0 +1,191 @@
+  
+Section 1 - Preparation
+In this section, we will download all necessary tools to add a basic system call to the Linux kernel and run it. This is the only part of the entire process where network connectivity is necessary.
+
+1.1 - Fully update your operating system.
+sudo apt update && sudo apt upgrade -y
+1.2 - Download and install the essential packages to compile kernels.
+sudo apt install build-essential libncurses-dev libssl-dev libelf-dev bison flex -y
+If would rather use vim or any other text editor instead of nano, below is an example of how you install it.
+sudo apt install vim -y
+1.3 - Clean up your installed packages.
+sudo apt clean && sudo apt autoremove -y
+1.4 - Download the source code of the latest stable version of the Linux kernel (which is 5.8.1 as of 12 August 2020) to your home folder.
+wget -P ~/ https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.8.1.tar.xz
+If you have downloaded a newer version of the Linux kernel, refer to this documentation to learn about any relevant change made to system calls.
+
+1.5 - Unpack the tarball you just downloaded to your home folder.
+tar -xvf ~/linux-5.8.1.tar.xz -C ~/
+1.6 - Reboot your computer.
+
+---
+
+Section 2 - Creation
+In this section, you will write a basic system call in C and integrate it into the new kernel.
+
+2.1 - Check the version of your current kernel.
+uname -r
+As of 12 August 2020, it should display the following.
+
+5.4.0-42-generic
+
+In section 4, it should be different.
+
+2.2 - Change your working directory to the root directory of the recently unpacked source code.
+cd ~/linux-5.8.1/
+2.3 - Create the home directory of your system call.
+
+Decide a name for your system call, and keep it consistent from this point onwards. I have chosen best_team.
+mkdir best_team
+2.4 - Create a C file for your system call.
+
+Create the C file with the following command.
+nano best_team/best_team.c
+Write the following code in it.
+#include <linux/kernel.h>
+#include <linux/syscalls.h>
+
+SYSCALL_DEFINE0(best_team)
+
+{
+    printk("My team is Rola Sultan , Zeyad Mohamed Mamoum and Ahmed Sayed Ahmed.\n");
+    return 0;
+}
+Save it and exit the text editor.
+
+2.5 - Create a Makefile for your system call.
+
+Create the Makefile with the following command.
+nano best_team/Makefile
+Write the following code in it.
+obj-y := best_team.o
+Save it and exit the text editor.
+
+2.6 - Add the home directory of your system call to the main Makefile of the kernel.
+
+Open the Makefile with the following command.
+nano Makefile
+Search for core-y. In the second result, you will see a series of directories.
+
+kernel/ certs/ mm/ fs/ ipc/ security/ crypto/ block/
+
+In the fresh source code of Linux 5.8.1 kernel, it should be in line 1073.
+
+Add the home directory of your system call at the end like the following.
+kernel/ certs/ mm/ fs/ ipc/ security/ crypto/ block/ best_team/
+Save it and exit the editor.
+
+2.7 - Add a corresponding function prototype for your system call to the header file of system calls.
+
+Open the header file with the following command.
+nano include/linux/syscalls.h
+Navigate to the bottom of it and write the following code just above #endif.
+asmlinkage long sys_best_team(void);
+Save it and exit the editor.
+
+2.8 - Add your system call to the kernel's system call table.
+
+Open the table with the following command.
+nano arch/x86/entry/syscalls/syscall_64.tbl
+Navigate to the bottom of it. You will find a series of x32 system calls. Scroll to the section above it. This is the section of your interest. Add the following code at the end of this section respecting the chronology of the row as well as the format of the column. Use Tab for space.
+440     common  best_team                sys_best_team
+In the fresh source code of Linux 5.8.1 kernel, the number for your system call should be 440.
+
+Save it and exit the editor.
+
+
+---
+
+Section 3 - Installation
+In this section, you will install the new kernel and prepare your operating system to boot into it.
+
+3.1 - Configure the kernel.
+
+Make sure the window of your terminal is maximized.
+
+Open the configuration window with the following command.
+make menuconfig
+Use Tab to move between options. Make no changes to keep it in default settings.
+
+Save and exit.
+
+3.2 - Find out how many logical cores you have.
+nproc
+The following few commands require a long time to be executed. Parallel processing will greatly speed them up. For me, it is 12. Therefore, I will put 12 after -j in the following commands.
+
+3.3 - Compile the kernel's source code.
+make -j2
+3.4 - Prepare the installer of the kernel.
+sudo make modules_install -j2
+3.5 - Install the kernel.
+sudo make install -j2
+3.6 - Update the bootloader of the operating system with the new kernel.
+sudo update-grub
+3.7 - Reboot your computer.
+
+
+---
+
+Section 4 - Result
+In this section, you will write a C program to check whether your system call works or not. After that, you will see your system call in action.
+
+4.1 - Check the version of your current kernel.
+uname -r
+It should display the following.
+
+5.8.1
+
+4.2 - Change your working directory to your home directory.
+cd ~
+4.3 - Create a C file to generate a report of the success or failure of your system call.
+
+Create the C file with the following command.
+nano report.c
+Write the following code in it.
+#include <linux/kernel.h>
+#include <sys/syscall.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+
+#define __NR_best_team 440
+
+long best_team_syscall(void)
+{
+    return syscall(__NR_best_team);
+}
+
+int main(int argc, char *argv[])
+{
+    long activity;
+    activity = best_team_syscall();
+
+    if(activity < 0)
+    {
+        perror("Sorry,Your system call appears to have failed.");
+    }
+
+    else
+    {
+        printf("Congratulations, Your system call is functional. Run the command dmesg in the terminal and find out!\n");
+    }
+
+    return 0;
+}
+You can customize the messages for failure and success anyhow you like.
+
+Save it and exit the editor.
+
+4.4 - Compile the C file you just created.
+gcc -o report report.c
+4.5 - Run the C file you just compiled.
+./report
+If it displays the following, everything is working as intended.
+
+Congratulations, Your system call is functional. Run the command dmesg in the terminal and find out!
+
+4.6 - Check the last line of the dmesg output.
+dmesg
+At the bottom, you should now see the following.
+My team is Rola Sultan , Zeyad Mohamed Mamoun and Ahmes Sayed Ahmed.
